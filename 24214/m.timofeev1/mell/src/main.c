@@ -154,10 +154,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (has_running_jobs())
-	{
-		wait_for_jobs();
-	}
+	terminate_all_jobs();
 
 	return 0;
 }

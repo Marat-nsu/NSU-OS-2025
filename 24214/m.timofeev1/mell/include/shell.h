@@ -39,6 +39,7 @@ void update_job_state(int job_idx, int state);
 char *get_job_cmdline(int job_idx);
 int has_running_jobs();
 void wait_for_jobs();
+void terminate_all_jobs(void);
 
 void sigint_handler(int sig);
 void init_signals(void);

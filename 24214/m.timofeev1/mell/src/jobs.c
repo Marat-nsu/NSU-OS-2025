@@ -163,3 +163,34 @@ void wait_for_jobs()
 		}
 	}
 }
+
+void terminate_all_jobs(void)
+{
+	int status;
+
+	for (int i = 0; i < njobs; i++)
+	{
+		if (jobs[i].state == JOB_RUNNING || jobs[i].state == JOB_STOPPED)
+		{
+			kill(-jobs[i].pgid, SIGTERM);
+		}
+	}
+
+	usleep(100000);
+
+	for (int i = 0; i < njobs; i++)
+	{
+		if (jobs[i].state == JOB_RUNNING || jobs[i].state == JOB_STOPPED)
+		{
+			if (kill(-jobs[i].pgid, 0) == 0)
+			{
+				kill(-jobs[i].pgid, SIGKILL);
+			}
+			while (waitpid(-jobs[i].pgid, &status, WNOHANG) > 0)
+				;
+			free(jobs[i].cmdline);
+		}
+	}
+
+	njobs = 0;
+}

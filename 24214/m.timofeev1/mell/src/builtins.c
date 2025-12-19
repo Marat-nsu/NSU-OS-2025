@@ -200,7 +200,7 @@ int builtin_jobs(void)
 
 int builtin_exit(void)
 {
-	cleanup_jobs();
+	terminate_all_jobs();
 	exit(0);
 }
 
