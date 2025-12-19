@@ -61,33 +61,46 @@ void sigchld_handler(int sig)
 
 	while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED)) > 0)
 	{
-		pid_t pgid = getpgid(pid);
-		if (pgid == -1)
+		if (WIFSTOPPED(status))
 		{
-			pgid = pid;
-		}
-
-		int job_idx = find_job(pgid);
-
-		if (job_idx >= 0)
-		{
-			if (WIFEXITED(status) || WIFSIGNALED(status))
+			pid_t pgid = getpgid(pid);
+			if (pgid > 0)
 			{
-				fprintf(stderr, "[%d] + done       %s\n", jobs[job_idx].pgid, jobs[job_idx].cmdline);
-				free(jobs[job_idx].cmdline);
-				for (int j = job_idx; j < njobs - 1; j++)
+				int job_idx = find_job(pgid);
+				if (job_idx >= 0)
+				{
+					jobs[job_idx].state = JOB_STOPPED;
+				}
+			}
+		}
+		else if (WIFCONTINUED(status))
+		{
+			pid_t pgid = getpgid(pid);
+			if (pgid > 0)
+			{
+				int job_idx = find_job(pgid);
+				if (job_idx >= 0)
+				{
+					jobs[job_idx].state = JOB_RUNNING;
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i < njobs; i++)
+	{
+		if (jobs[i].state == JOB_RUNNING)
+		{
+			if (kill(-jobs[i].pgid, 0) == -1 && errno == ESRCH)
+			{
+				fprintf(stderr, "[%d] + done       %s\n", jobs[i].pgid, jobs[i].cmdline);
+				free(jobs[i].cmdline);
+				for (int j = i; j < njobs - 1; j++)
 				{
 					jobs[j] = jobs[j + 1];
 				}
 				njobs--;
-			}
-			else if (WIFSTOPPED(status))
-			{
-				jobs[job_idx].state = JOB_STOPPED;
-			}
-			else if (WIFCONTINUED(status))
-			{
-				jobs[job_idx].state = JOB_RUNNING;
+				i--;
 			}
 		}
 	}

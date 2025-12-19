@@ -23,6 +23,8 @@ int execute_pipeline(int ncmds, char *cmdline)
 	pid_t pids[MAXCMDS];
 	sigset_t mask, oldmask;
 
+	int is_subprocess = (shell_pgid != getpid());
+
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGCHLD);
 	sigprocmask(SIG_BLOCK, &mask, &oldmask);
@@ -71,36 +73,47 @@ int execute_pipeline(int ncmds, char *cmdline)
 
 	close_all_pipes(ncmds - 1, pipes);
 
-	if (!bkgrnd)
+	if (bkgrnd && !is_subprocess)
 	{
-		if (shell_is_interactive)
-		{
-			tcsetpgrp(shell_terminal, pgid);
-		}
-
+		printf("[%d]\n", pgid);
 		add_job(pgid, JOB_RUNNING, cmdline);
+		sigprocmask(SIG_SETMASK, &oldmask, NULL);
+		return 0;
+	}
 
-		int status;
-		int stopped = 0;
+	if (!is_subprocess && shell_is_interactive)
+	{
+		tcsetpgrp(shell_terminal, pgid);
+	}
 
-		for (i = 0; i < ncmds; i++)
+	if (!is_subprocess)
+	{
+		add_job(pgid, JOB_RUNNING, cmdline);
+	}
+
+	int status;
+	int stopped = 0;
+
+	for (i = 0; i < ncmds; i++)
+	{
+		if (waitpid(pids[i], &status, WUNTRACED) > 0)
 		{
-			if (waitpid(pids[i], &status, WUNTRACED) > 0)
+			if (WIFSTOPPED(status))
 			{
-				if (WIFSTOPPED(status))
-				{
-					stopped = 1;
-					break;
-				}
+				stopped = 1;
+				break;
 			}
 		}
+	}
 
-		if (shell_is_interactive)
-		{
-			tcsetpgrp(shell_terminal, shell_pgid);
-			tcsetattr(shell_terminal, TCSADRAIN, &shell_tmodes);
-		}
+	if (!is_subprocess && shell_is_interactive)
+	{
+		tcsetpgrp(shell_terminal, shell_pgid);
+		tcsetattr(shell_terminal, TCSADRAIN, &shell_tmodes);
+	}
 
+	if (!is_subprocess)
+	{
 		int job_idx = find_job(pgid);
 		if (stopped)
 		{
@@ -117,16 +130,9 @@ int execute_pipeline(int ncmds, char *cmdline)
 				update_job_state(job_idx, JOB_DONE);
 			}
 		}
-
-		sigprocmask(SIG_SETMASK, &oldmask, NULL);
 	}
-	else
-	{
-		printf("[%d]\n", pgid);
-		add_job(pgid, JOB_RUNNING, cmdline);
 
-		sigprocmask(SIG_SETMASK, &oldmask, NULL);
-	}
+	sigprocmask(SIG_SETMASK, &oldmask, NULL);
 
 	return 0;
 }
