@@ -43,6 +43,7 @@ void wait_for_jobs();
 void sigint_handler(int sig);
 void init_signals(void);
 void setup_child_signals(void);
+void setup_background_signals(void);
 
 int builtin_fg(void);
 int builtin_bg(void);

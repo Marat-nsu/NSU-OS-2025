@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 			else if (bg_pid == 0)
 			{
 				setpgid(0, 0);
-				setup_child_signals();
+				setup_background_signals();
 				bkgrnd = 0;
 
 				int cmd_start = 0;

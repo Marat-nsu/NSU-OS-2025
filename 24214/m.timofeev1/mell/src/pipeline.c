@@ -55,7 +55,10 @@ int execute_pipeline(int ncmds, char *cmdline)
 			}
 			setpgid(0, pgid);
 
-			setup_child_signals();
+			if (bkgrnd || is_subprocess)
+				setup_background_signals();
+			else
+				setup_child_signals();
 			setup_io_redirection(i, ncmds, pipes);
 			close_all_pipes(ncmds - 1, pipes);
 			execute_command(i);
