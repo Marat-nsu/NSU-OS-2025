@@ -56,12 +56,10 @@ void setup_background_signals(void)
 	memset(&sa, 0, sizeof(sa));
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
+	sa.sa_handler = SIG_DFL;
 
-	sa.sa_handler = SIG_IGN;
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGQUIT, &sa, NULL);
-
-	sa.sa_handler = SIG_DFL;
 	sigaction(SIGTSTP, &sa, NULL);
 	sigaction(SIGTTIN, &sa, NULL);
 	sigaction(SIGTTOU, &sa, NULL);
